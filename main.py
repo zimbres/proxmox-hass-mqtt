@@ -16,6 +16,10 @@ env = json.load(open('env.json'))
 token = env["TOKEN"]
 secret = env["SECRET"]
 address = env["ADDRESS"]
+node = env["NODE"]
+unique_id = env["unique_id"]
+object_id = env["object_id"]
+node_name =  env["node_name"]
 
 broker = env["BROKER"]
 port = env["PORT"]
@@ -70,11 +74,11 @@ def connect_mqtt():
     return client
 
 
-def set_node_status(client: mqtt.Client, node: Node):
-    topic = f"homeassistant/sensor/proxmox_node/pve/state"
+def set_node_status(client: mqtt.Client, node_node: Node):
+    topic = f"homeassistant/sensor/proxmox_node/{node}/state"
     client.publish(topic, "ON")
-    node_data = node.data
-    topic = f"homeassistant/sensor/proxmox_node/pve/attr"
+    node_data = node_node.data
+    topic = f"homeassistant/sensor/proxmox_node/{node}/attr"
     payload = {
         "loadavg": node_data.loadavg,
         "wait": round(node_data.wait * 100, 2),
@@ -105,16 +109,16 @@ def set_vm_sensors(client: mqtt.Client, vm: VM):
 
 
 def bootstrap_node(client: mqtt.Client):
-    topic = f"homeassistant/sensor/proxmox_node/pve/config"
-    payload = '''{
-        "unique_id": "proxmox_node_pve",
-        "object_id": "proxmox_node_pve",
-        "name": "PVE",
+    topic = f"homeassistant/sensor/proxmox_node/{node}/config"
+    payload = '''{{
+        "unique_id": "{unique_id}",
+        "object_id": "{object_id}",
+        "name": "{node_name}",
         "icon": "mdi:server",
-        "state_topic": "homeassistant/sensor/proxmox_node/pve/state",
-        "json_attributes_topic": "homeassistant/sensor/proxmox_node/pve/attr",
-        "json_attributes_template": "{{ value_json | tojson }}"
-    }'''
+        "state_topic": "homeassistant/sensor/proxmox_node/{node}/state",
+        "json_attributes_topic": "homeassistant/sensor/proxmox_node/{node}/attr",
+        "json_attributes_template": "{{{{ value_json | tojson }}}}"
+    }}'''.format(unique_id=unique_id, object_id=object_id, node_name=node_name, node=node)
     client.publish(topic, payload, retain=True)
 
 
@@ -180,12 +184,12 @@ class Proxmox:
         self.address = address
 
     def node_status(self):
-        url = f'{self.address}api2/json/nodes/pve/status'
+        url = f'{self.address}api2/json/nodes/{node}/status'
         result = self.call_api(url, 'GET')
         return from_dict(Node, json.loads(result.content))
 
     def vm_status(self, vm_id: str) -> VM:
-        url = f'{self.address}api2/json/nodes/pve/{self.vm_type(vm_id)}/{vm_id}/status/current'
+        url = f'{self.address}api2/json/nodes/{node}/{self.vm_type(vm_id)}/{vm_id}/status/current'
         result = self.call_api(url, 'GET')
         if result.status_code == 200:
             return from_dict(VM, json.loads(result.content))
@@ -204,12 +208,12 @@ class Proxmox:
         return {"Authorization": f"PVEAPIToken={self.token}={self.secret}"}
 
     def vm_type(self, vm_id: str):
-        url = f'{self.address}api2/json/nodes/pve/qemu'
+        url = f'{self.address}api2/json/nodes/{node}/qemu'
         result = self.call_api(url, 'GET')
         qemu_list = json.loads(result.content)["data"]
         if [element for element in qemu_list if str(element['vmid']) == str(vm_id)]:
             return "qemu"
-        url = f'{self.address}api2/json/nodes/pve/lxc'
+        url = f'{self.address}api2/json/nodes/{node}/lxc'
         result = self.call_api(url, 'GET')
 
         lxc_list = json.loads(result.content)["data"]
@@ -217,12 +221,12 @@ class Proxmox:
             return "lxc"
 
     def start(self, vm_id: str):
-        url = f'{self.address}api2/json/nodes/pve/{self.vm_type(vm_id)}/{vm_id}/status/start'
+        url = f'{self.address}api2/json/nodes/{node}/{self.vm_type(vm_id)}/{vm_id}/status/start'
         self.call_api(url, 'POST')
         print(f'VM {vm_id} turned on.')
 
     def shutdown(self, vm_id: str):
-        url = f'{self.address}api2/json/nodes/pve/{self.vm_type(vm_id)}/{vm_id}/status/shutdown'
+        url = f'{self.address}api2/json/nodes/{node}/{self.vm_type(vm_id)}/{vm_id}/status/shutdown'
         self.call_api(url, 'POST')
         print(f'VM {vm_id} turned off.')
 
