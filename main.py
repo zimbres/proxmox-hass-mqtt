@@ -18,7 +18,7 @@ secret = env["SECRET"]
 address = env["ADDRESS"]
 node = env["NODE"]
 unique_id = env["unique_id"]
-object_id = env["object_id"]
+default_entity_id = env["default_entity_id"]
 node_name =  env["node_name"]
 
 broker = env["BROKER"]
@@ -112,13 +112,13 @@ def bootstrap_node(client: mqtt.Client):
     topic = f"homeassistant/sensor/proxmox_node/{node}/config"
     payload = '''{{
         "unique_id": "{unique_id}",
-        "object_id": "{object_id}",
+        "default_entity_id": "sensor.{default_entity_id}",
         "name": "{node_name}",
         "icon": "mdi:server",
         "state_topic": "homeassistant/sensor/proxmox_node/{node}/state",
         "json_attributes_topic": "homeassistant/sensor/proxmox_node/{node}/attr",
         "json_attributes_template": "{{{{ value_json | tojson }}}}"
-    }}'''.format(unique_id=unique_id, object_id=object_id, node_name=node_name, node=node)
+    }}'''.format(unique_id=unique_id, default_entity_id=default_entity_id, node_name=node_name, node=node)
     client.publish(topic, payload, retain=True)
 
 
@@ -129,7 +129,7 @@ def bootstrap_vm(client: mqtt.Client, vm: VM):
     name = f"{vm_data.name.upper()} ({vm_data.vmid})"
     payload = f'''{{
         "unique_id": "proxmox_vm_{vm_data.vmid}",
-        "object_id": "proxmox_vm_{vm_data.vmid}",
+        "default_entity_id": "sensor.proxmox_vm_{vm_data.vmid}",
         "device_class": "switch",
         "name": "{name}",
         "command_topic": "homeassistant/switch/proxmox_vm/{vm_data.vmid}/set",
@@ -141,7 +141,7 @@ def bootstrap_vm(client: mqtt.Client, vm: VM):
     topic = f"homeassistant/sensor/proxmox_vm_memory_total/{vm_data.vmid}/config"
     payload = f'''{{
         "unique_id": "proxmox_vm_{vm_data.vmid}_memory_total",
-        "object_id": "proxmox_vm_{vm_data.vmid}_memory_total",
+        "default_entity_id": "sensor.proxmox_vm_{vm_data.vmid}_memory_total",
         "device_class": "data_size",
         "unit_of_measurement": "MB",
         "name": "{name}",
@@ -154,7 +154,7 @@ def bootstrap_vm(client: mqtt.Client, vm: VM):
     topic = f"homeassistant/sensor/proxmox_vm_memory_usage/{vm_data.vmid}/config"
     payload = f'''{{
         "unique_id": "proxmox_vm_{vm_data.vmid}_memory_usage",
-        "object_id": "proxmox_vm_{vm_data.vmid}_memory_usage",
+        "default_entity_id": "sensor.proxmox_vm_{vm_data.vmid}_memory_usage",
         "device_class": "battery",
         "unit_of_measurement": "%",
         "name": "{name}",
@@ -167,7 +167,7 @@ def bootstrap_vm(client: mqtt.Client, vm: VM):
     topic = f"homeassistant/sensor/proxmox_vm_cpu/{vm_data.vmid}/config"
     payload = f'''{{
         "unique_id": "proxmox_vm_{vm_data.vmid}_cpu",
-        "object_id": "proxmox_vm_{vm_data.vmid}_cpu",
+        "default_entity_id": "sensor.proxmox_vm_{vm_data.vmid}_cpu",
         "device_class": "battery",
         "unit_of_measurement": "%",
         "name": "{name}",
